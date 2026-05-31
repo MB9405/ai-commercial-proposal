@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanType {
+  FREE
+  START
+  BUSINESS
+  ENTERPRISE
+}
+
+enum ProposalStatus {
+  DRAFT
+  COMPLETED
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+enum TemplateType {
+  IT
+  MARKETING
+  DESIGN
+  CONSULTING
+  CONSTRUCTION
+  PROCUREMENT
+  EDUCATION
+  LEGAL
+}
+
+enum DocumentType {
+  PROPOSAL
+  CONTRACT
+  INVOICE
+  COMMERCIAL_LETTER
+  WHATSAPP_MESSAGE
+  CALL_SCRIPT
+}
+
+model User {
+  id            String   @id @default(uuid())
+  telegramId    String?  @unique
+  email         String?  @unique
+  passwordHash  String?
+  name          String?
+  companyName   String?
+  phone         String?
+  avatarUrl     String?
+  logoUrl       String?
+  brandColor    String   @default("#2563EB")
+  planType      PlanType @default(FREE)
+  proposalsUsed Int      @default(0)
+  proposalsLimit Int     @default(3)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  proposals    Proposal[]
+  documents    GeneratedDocument[]
+  payments     Payment[]
+  subscription Subscription?
+}
+
+model Proposal {
+  id            String          @id @default(uuid())
+  userId        String
+  clientName    String
+  clientCompany String?
+  templateType  TemplateType    @default(IT)
+  status        ProposalStatus  @default(COMPLETED)
+  inputData     Json
+  generatedData Json?
+  pdfUrl        String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  user       User               @relation(fields: [userId], references: [id])
+  documents  GeneratedDocument[]
+}
+
+model GeneratedDocument {
+  id           String       @id @default(uuid())
+  proposalId   String
+  documentType DocumentType
+  content      Json
+  fileUrl      String?
+  createdAt    DateTime     @default(now())
+
+  proposal Proposal @relation(fields: [proposalId], references: [id])
+}
+
+model Subscription {
+  id            String      @id @default(uuid())
+  userId        String      @unique
+  planType      PlanType
+  startDate     DateTime    @default(now())
+  endDate       DateTime?
+  autoRenew     Boolean     @default(true)
+  paymentMethod String?
+  status        String      @default("ACTIVE")
+
+  user   User    @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id             String   @id @default(uuid())
+  userId         String
+  amount         Int      // in tenge
+  currency       String   @default("KZT")
+  status         String   @default("PENDING")
+  paymentMethod  String?
+  transactionId  String?
+  description    String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Template {
+  id           String       @id @default(uuid())
+  name         String
+  type         TemplateType
+  description  String?
+  structure    Json
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
